@@ -1,0 +1,60 @@
+package main
+
+import (
+    "log"
+    "github.com/go-telegram-bot-api/telegram-bot-api"
+)
+
+func main() {
+    bot, err := tgbotapi.NewBotAPI("YOUR_BOT_TOKEN")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    log.Printf("Authorized on account %s", bot.Self.UserName)
+
+    u := tgbotapi.NewUpdate(0)
+    u.Timeout = 60
+
+    updates, err := bot.GetUpdatesChan(u)
+
+    for update := range updates {
+        if update.Message == nil { // ignore non-Message Updates
+            continue
+        }
+
+        // Создание клавиатуры
+        keyboard := tgbotapi.NewInlineKeyboardMarkup(
+            tgbotapi.NewInlineKeyboardRow(
+                tgbotapi.NewInlineKeyboardButtonData("Кнопка 1", "btn1"),
+                tgbotapi.NewInlineKeyboardButtonData("Кнопка 2", "btn2"),
+            ),
+        )
+
+        // Ответ пользователю
+        msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Выберите опцию:")
+        msg.ReplyMarkup = keyboard
+
+        if _, err := bot.Send(msg); err != nil {
+            log.Println(err)
+        }
+
+        // Обработка нажатий на кнопки
+        if update.CallbackQuery != nil {
+            var callbackMsg string
+            switch update.CallbackQuery.Data {
+            case "btn1":
+                callbackMsg = "Вы выбрали кнопку 1!"
+            case "btn2":
+                callbackMsg = "Вы выбрали кнопку 2!"
+            default:
+                callbackMsg = "Неизвестный выбор."
+            }
+
+            callback := tgbotapi.NewCallback(update.CallbackQuery.ID, callbackMsg)
+            if _, err := bot.Send(callback); err != nil {
+                log.Println(err)
+            }
+        }
+    }
+}
