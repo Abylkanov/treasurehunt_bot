@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	//"database/sql"
 	"log"
-
+	//"database/sql"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+func HandleCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) string {
+	message := update.Message
 	// Логирование входящих сообщений
 	log.Printf("[%s] %s", message.From.UserName, message.Text)
 
@@ -15,17 +15,14 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	if message.IsCommand() {
 		switch message.Command() {
 		case "start":
-			msg := tgbotapi.NewMessage(message.Chat.ID, "Привет! Выберите из меню год выпуска серии Hot Wheels \n ⬇️⬇️⬇️.")
+			msg := tgbotapi.NewMessage(message.Chat.ID, "Привет! Введите из меню год выпуска серии Hot Wheels \n ⬇️⬇️⬇️.")
 			bot.Send(msg)
 		default:
 			msg := tgbotapi.NewMessage(message.Chat.ID, "Команда не распознана.")
 			bot.Send(msg)
 		}
-	} else {
-		// Ответ на текстовые сообщения
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Вы написали: "+message.Text)
-		bot.Send(msg)
 	}
+	return "year"
 }
 
 // func HandleMessageDB(db *sql.DB, bot *tgbotapi.BotAPI, message *tgbotapi.Message) {

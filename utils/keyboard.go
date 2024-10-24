@@ -10,3 +10,21 @@ func CreateKeyboardYear() tgbotapi.ReplyKeyboardMarkup {
 		),
 	)
 }
+
+func CreateKeyboardSeries() tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("TH", "th"),
+			tgbotapi.NewInlineKeyboardButtonData("Supers", "supers"),
+		),
+	)
+}
+
+func CreateKeyboardPhotos() tgbotapi.InlineKeyboardMarkup {
+	return tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Назад", "back"),
+			tgbotapi.NewInlineKeyboardButtonData("Все фото", "all"),
+		),
+	)
+}

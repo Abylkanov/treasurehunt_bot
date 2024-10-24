@@ -3,12 +3,14 @@ package main
 import (
 	"log"
 	"telebot/config"
-	"telebot/utils"
+	//"telebot/utils"
 	//	"telebot/database"
 	"telebot/handlers"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
+
+var status = "root"
 
 func main() {
 	// Загрузка конфигурации
@@ -34,28 +36,17 @@ func main() {
 		if update.Message == nil {
 			continue
 		}
+		switch status {
+		case "root":
+			status = handlers.HandleCommand(bot, &update)
+		case "year":
+			handlers.HandleMessage(bot, &update)
 
-		// Определите кнопки
-		btn1 := tgbotapi.NewKeyboardButton("Команда 1")
-		btn2 := tgbotapi.NewKeyboardButton("Команда 2")
-		btn3 := tgbotapi.NewKeyboardButton("Команда 3")
-		row := []tgbotapi.KeyboardButton{btn1, btn2, btn3}
-		// Создайте клавиатуру
-		keyboard1 := tgbotapi.NewReplyKeyboard(row)
+		default:
 
-		// Создаем клавиатуру
-		keyboard := utils.CreateKeyboardYear()
-
-		// Отправляем сообщение с клавиатурой
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Выбери год выпука серии:")
-		msg.ReplyMarkup = keyboard
-		msg.ReplyMarkup = keyboard1
-
-		if _, err := bot.Send(msg); err != nil {
-			log.Println(err)
 		}
 		// Обработка сообщений и команд
-		handlers.HandleMessage(bot, update.Message)
+
 		// //Обработка сообщений и команд c database
 		// handlers.HandleMessageDB(db, bot, update.Message)
 
