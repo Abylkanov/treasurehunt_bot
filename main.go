@@ -25,18 +25,6 @@ func main() {
 	// Обработка обновлений
 	updates := handlers.SetupUpdates(bot)
 	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
-		switch status {
-		case "root":
-			status = handlers.HandleCommand(bot, &update)
-		case "year":
-			handlers.HandleMessage(bot, &update)
-
-		default:
-
-		}
-
+		handlers.HandleUpdates(bot, update)
 	}
 }

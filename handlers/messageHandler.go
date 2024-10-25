@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"telebot/models"
 	"telebot/utils"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api"
@@ -8,20 +9,22 @@ import (
 
 func HandleMessage(bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	message := update.Message
+	userState := models.GetUserState(int64(message.From.ID))
+
 	switch message.Text {
 	case "2023":
 		Handle2023(bot, update)
-		// return "2023"
+		// Обновление состояния здесь по необходимости
 	case "2024":
 		msg := tgbotapi.NewMessage(message.Chat.ID, "Выберите серию Treasure Hunt:")
 		inlineKeyboard := utils.CreateKeyboardSeries()
 		msg.ReplyMarkup = inlineKeyboard
 		bot.Send(msg)
-		// return "2024"
+		// Обновление состояния
+		userState.State = "year" // или другое состояние
 	default:
 		msg := tgbotapi.NewMessage(message.Chat.ID, "К доступны только 2023-2024 год")
 		bot.Send(msg)
-		// return "year"
 	}
 }
 
