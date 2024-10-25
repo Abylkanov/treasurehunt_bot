@@ -82,7 +82,21 @@ func handleCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery) {
 
 		}
 	case callback.Data == "all":
-		sendAllPhoto()
+		if year, ok := userState.Data["selected_year"].(string); ok && year != "" {
+			if series, ok := userState.Data["selected_series"].(string); ok && series != "" {
+				files := getPhoto(year, series, 0) // Получаем все файлы
+
+				// Проверяем, что files не nil и это мапа
+				if files != nil {
+					for key, value := range files.(map[string]string) { // Приводим к нужному типу
+						err := SendPhoto(bot, chatID, value, key)
+						if err != nil {
+							log.Printf("Ошибка при отправке фото %s: %s", value, err)
+						}
+					}
+				}
+			}
+		}
 	default:
 		responseMsg = "Неизвестный выбор."
 		msg := tgbotapi.NewMessage(chatID, responseMsg)
@@ -101,4 +115,21 @@ func handleCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery) {
 
 	// Подтверждение нажатия кнопки
 	bot.AnswerCallbackQuery(tgbotapi.NewCallback(callback.ID, "Вы выбрали: "+callback.Data))
+}
+
+func SendPhoto(bot *tgbotapi.BotAPI, chatID int64, photoPath string, caption string) error {
+	// Открываем файл
+	// file, err := os.Open(photoPath)
+	// if err != nil {
+	// 	return err // Возвращаем ошибку, если файл не найден
+	// }
+	// defer file.Close() // Закрываем файл после использования
+
+	// Создаем объект PhotoConfig
+	photo := tgbotapi.NewPhotoUpload(chatID, photoPath) // Используем NewPhotoUpload
+	photo.Caption = caption                             // Добавляем подпись, если необходимо
+
+	// Отправляем фото
+	_, err := bot.Send(photo)
+	return err
 }
