@@ -22,24 +22,16 @@ func HandleUpdates(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	if update.Message != nil { // Обработка обычных сообщений
 		userState := models.GetUserState(int64(update.Message.From.ID))
 
-		switch userState.State {
-		case "root":
-			userState.State = HandleCommand(bot, &update)
-		case "year":
-			HandleMessage(bot, &update)
-
-		default:
-			// Обработка других состояний, если необходимо
+		if update.Message.IsCommand() {
+			HandleCommand(bot, update.Message, userState)
 		}
 	} else if update.CallbackQuery != nil { // Обработка нажатий на кнопки
-		handleCallback(bot, update)
+		handleCallback(bot, update.CallbackQuery)
 	}
 }
 
-func HandleCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) string {
-	message := update.Message
+func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, userState *models.UserState) {
 	log.Printf("[%s] %s", message.From.UserName, message.Text)
-
 	if message.IsCommand() {
 		switch message.Command() {
 		case "start":
@@ -47,41 +39,53 @@ func HandleCommand(bot *tgbotapi.BotAPI, update *tgbotapi.Update) string {
 			inlineKeyboard := utils.CreateKeyboardYear()
 			msg.ReplyMarkup = inlineKeyboard
 			bot.Send(msg)
-			return "year" // Обновляем состояние
+			// Инициализация состояния пользователя
+			userState.Data = make(map[string]interface{})
+			userState.Data["selected_year"] = nil
+			userState.Data["selected_series"] = nil
 		default:
 			msg := tgbotapi.NewMessage(message.Chat.ID, "Команда не распознана.")
 			bot.Send(msg)
 		}
 	}
-	return "root"
 }
 
-func handleCallback(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
-	callback := update.CallbackQuery
+func handleCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery) {
 	log.Printf("Кнопка нажата: %s", callback.Data)
 
 	// Сохраняем ID предыдущего сообщения
 	msgID := callback.Message.MessageID
 	chatID := callback.Message.Chat.ID
 
-	// Реакция на нажатие кнопок
-	var responseMsg string
-	switch callback.Data {
-	case "th":
-		responseMsg = "Вы выбрали Treasure Hunt!"
-	case "supers":
-		responseMsg = "Вы выбрали Supers!"
-	case "2023":
-		responseMsg = "Вы выбрали 2023!"
-	case "2024":
-		responseMsg = "Вы выбрали 2024!"
+	responseMsg := "Неизвестный выбор."
+	userState := models.GetUserState(int64(callback.From.ID))
+
+	switch {
+	case callback.Data == "2023" || callback.Data == "2024":
+		userState.Data["selected_year"] = callback.Data
+		responseMsg = "Вы выбрали " + callback.Data + "! Теперь выберите тип."
+		inlineKeyboard := utils.CreateKeyboardSeries()
+		msg := tgbotapi.NewMessage(chatID, responseMsg)
+		msg.ReplyMarkup = inlineKeyboard
+		bot.Send(msg)
+
+	case callback.Data == "th" || callback.Data == "supers":
+		if year, ok := userState.Data["selected_year"].(string); ok && year != "" {
+			userState.Data["selected_series"] = callback.Data
+			responseMsg = getSelectedMessage(year, callback.Data)
+		} else {
+			responseMsg = "Сначала выберите год."
+		}
+		msg := tgbotapi.NewMessage(chatID, responseMsg)
+		bot.Send(msg)
 	default:
 		responseMsg = "Неизвестный выбор."
+		msg := tgbotapi.NewMessage(chatID, responseMsg)
+		bot.Send(msg)
 	}
 
-	// Отправка нового сообщения
-	msg := tgbotapi.NewMessage(chatID, responseMsg)
-	bot.Send(msg)
+	// Обновляем состояние пользователя
+	models.UpdateUserState(int64(callback.From.ID), "waiting_selection", userState.Data)
 
 	// Удаление предыдущего сообщения
 	bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
