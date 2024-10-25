@@ -4,7 +4,6 @@ import (
 	"log"
 	"telebot/config"
 	//"telebot/utils"
-	//	"telebot/database"
 	"telebot/handlers"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api"
@@ -15,13 +14,6 @@ var status = "root"
 func main() {
 	// Загрузка конфигурации
 	cfg := config.LoadConfig()
-
-	// // Инициализация базы данных
-	// db, err := database.InitDB(cfg.DatabaseURL)
-	// if err != nil {
-	// 	log.Fatal("Error initializing database: ", err)
-	// }
-	// defer db.Close()
 
 	// Инициализация бота
 	bot, err := tgbotapi.NewBotAPI(cfg.TelegramToken)
@@ -45,10 +37,6 @@ func main() {
 		default:
 
 		}
-		// Обработка сообщений и команд
-
-		// //Обработка сообщений и команд c database
-		// handlers.HandleMessageDB(db, bot, update.Message)
 
 	}
 }
