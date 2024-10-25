@@ -64,23 +64,29 @@ func handleCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery) {
 	case callback.Data == "2023" || callback.Data == "2024":
 		userState.Data["selected_year"] = callback.Data
 		responseMsg = "Вы выбрали " + callback.Data + "! Теперь выберите тип."
-		inlineKeyboard := utils.CreateKeyboardSeries()
 		msg := tgbotapi.NewMessage(chatID, responseMsg)
-		msg.ReplyMarkup = inlineKeyboard
+		msg.ReplyMarkup = utils.CreateKeyboardSeries()
 		bot.Send(msg)
 
 	case callback.Data == "th" || callback.Data == "supers":
 		if year, ok := userState.Data["selected_year"].(string); ok && year != "" {
 			userState.Data["selected_series"] = callback.Data
 			responseMsg = getSelectedMessage(year, callback.Data)
+			msg := tgbotapi.NewMessage(chatID, responseMsg)
+			msg.ReplyMarkup = utils.CreateKeyboardPhotos()
+			bot.Send(msg)
 		} else {
 			responseMsg = "Сначала выберите год."
+			msg := tgbotapi.NewMessage(chatID, responseMsg)
+			bot.Send(msg)
+
 		}
-		msg := tgbotapi.NewMessage(chatID, responseMsg)
-		bot.Send(msg)
+	case callback.Data == "all":
+		sendAllPhoto()
 	default:
 		responseMsg = "Неизвестный выбор."
 		msg := tgbotapi.NewMessage(chatID, responseMsg)
+
 		bot.Send(msg)
 	}
 

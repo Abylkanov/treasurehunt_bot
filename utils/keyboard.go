@@ -23,7 +23,6 @@ func CreateKeyboardSeries() tgbotapi.InlineKeyboardMarkup {
 func CreateKeyboardPhotos() tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Назад", "back"),
 			tgbotapi.NewInlineKeyboardButtonData("Все фото", "all"),
 		),
 	)
