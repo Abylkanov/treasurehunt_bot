@@ -23,6 +23,7 @@ func main() {
 	bot.Debug = cfg.Debug
 
 	// Обработка обновлений
+
 	updates := handlers.SetupUpdates(bot)
 	for update := range updates {
 		handlers.HandleUpdates(bot, update)

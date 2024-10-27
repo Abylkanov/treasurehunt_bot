@@ -2,34 +2,108 @@ package handlers
 
 func getPhoto(year string, series string, value int) interface{} {
 	var imageMap map[string]string
+	var keys []string
 
+	// Инициализируем карту и ключи в зависимости от года и серии
 	if year == "2023" && series == "th" {
 		imageMap = imageMapTH2023
+		keys = keysTH2023
 	} else if year == "2023" && series == "supers" {
 		imageMap = imageMapSTH2023
+		keys = keysSTH2023
 	} else if year == "2024" && series == "th" {
 		imageMap = imageMapTH2024
+		keys = keysTH2024
 	} else if year == "2024" && series == "supers" {
 		imageMap = imageMapSTH2024
+		keys = keysSTH2024
 	} else {
-		return nil // Если не совпадает ни один случай, вернуть nil
+		return nil
 	}
 
 	if value == 0 {
 		return imageMap // Возвращаем всю мапу
-	} else if value > 0 && value <= len(imageMap) {
-		// Вычисляем ключ по индексу
-		i := 1
-		for k, v := range imageMap {
-			if i == value-1 { // Индексируем с нуля
-				return map[string]string{k: v} // Возвращаем только выбранный элемент
-			}
-			i++
-		}
+	} else if value > 0 && value <= len(keys) {
+		key := keys[value-1]                         // Индексируем с нуля
+		return map[string]string{key: imageMap[key]} // Возвращаем только выбранный элемент
 	}
 
-	return nil // Если value вне диапазона
+	return nil
 }
+
+var keysTH2023 = []string{
+	"95 Jeep Cherokee",
+	"2020 Ram 1500 Rebel",
+	"BMW R nineT Racer",
+	"Ducati 1199 Panigale",
+	"Madfast",
+	"Mad Propz",
+	"Mod Rod",
+	"Raijin Express",
+	"Rise N Climb",
+	"Surf Crate",
+	"Time Shifter",
+	"Tooned Volkswagen Golf Mk1",
+	"Toyota Land Cruiser",
+	"Volkswagen Baja Bug",
+	"Donut Drifter",
+}
+
+var keysSTH2023 = []string{
+	"'65 Mercury Comet Cyclone",
+	"'68 COPO Camaro",
+	"'68 Corvette–Gas Monkey Garage",
+	"'69 Shelby GT-500",
+	"'82 Toyota Supra",
+	"1968 Mazda Cosmo Sport",
+	"Classic TV Series Batmobile",
+	"Datsun 510 Wagon",
+	"Glory Chaser",
+	"Lotus Evija",
+	"Mercedes-Benz 300 SL",
+	"Mighty K",
+	"Porsche 935",
+	"Renault Sport R.S. 01",
+	"Volvo 240 Drift Wagon",
+}
+
+var keysTH2024 = []string{
+	"'47 Chevy Fleetline",
+	"'59 Chevy Impala",
+	"Bone Shaker",
+	"Draggin' Wagon",
+	"Ain't Fare",
+	"Batman Forever Batmobile",
+	"Car-de-Asada",
+	"Custom '53 Chevy",
+	"DMC DeLorean",
+	"Ford Mustang Mach-E 1400",
+	"Honda Super Cub Custom",
+	"Hot Wheels Ford Transit Connect",
+	"Porsche 928S Safari",
+	"Purple Passion",
+	"Tooligan",
+}
+
+var keysSTH2024 = []string{
+	"'18 Camaro SS",
+	"'60s Fiat 500D Modificado",
+	"'71 El Camino",
+	"'77 Pontiac Firebird TA",
+	"'83 Chevy Silverado",
+	"'89 Mercedes-Benz 560 SEC AMG",
+	"'96 Nissan 180SX Type X",
+	"24 Lamborghini Huracan LP 620-2 Super Trofeo",
+	"Volvo P1800 Gasser",
+	"Audi 90 quattro",
+	"BMW 507",
+	"Celero GT",
+	"Ford Escort RS2000",
+	"Mazda 787B",
+	"Mitsubishi Pajero Evolution",
+}
+
+// Аналогично для других мап
 
 var imageMapTH2023 = map[string]string{
 	"95 Jeep Cherokee":           "./images/TH-2023/95-Jeep-Cherokee-1.jpg",
