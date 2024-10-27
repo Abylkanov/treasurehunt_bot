@@ -63,7 +63,20 @@ func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, userState *m
 func HandleButtonPress(bot *tgbotapi.BotAPI, message *tgbotapi.Message, userState *models.UserState) {
 	chatID := message.Chat.ID
 
-	// Удаляем предыдущее сообщение, если оно существует
+	if messageIDs, ok := userState.Data["sent_message_ids"].([]int); ok && len(messageIDs) > 0 {
+		for _, msgID := range messageIDs {
+			// Попробуем удалить сообщение
+			if _, err := bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
+				ChatID:    chatID,
+				MessageID: msgID,
+			}); err != nil {
+				log.Printf("Ошибка при удалении сообщения с ID %d: %s", msgID, err)
+			}
+		}
+		// Обнуляем слайс после удаления всех сообщений
+		userState.Data["sent_message_ids"] = []int{}
+	}
+
 	if lastListID != 0 {
 		if _, err := bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
 			ChatID:    chatID,
@@ -117,87 +130,98 @@ func HandleButtonPress(bot *tgbotapi.BotAPI, message *tgbotapi.Message, userStat
 
 func handleCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery) {
 	log.Printf("Кнопка нажата: %s", callback.Data)
-	// Сохраняем ID предыдущего сообщения
 	chatID := callback.Message.Chat.ID
-	responseMsg := "Неизвестный выбор."
 	userState := models.GetUserState(int64(callback.From.ID))
+	responseMsg := "Неизвестный выбор."
+
+	year, yearOk := userState.Data["selected_year"].(string)
+	series, seriesOk := userState.Data["selected_series"].(string)
+
+	if !yearOk || year == "" || !seriesOk || series == "" {
+		bot.Send(tgbotapi.NewMessage(chatID, responseMsg))
+		return
+	}
 
 	switch callback.Data {
-	case "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15":
-		if year, ok := userState.Data["selected_year"].(string); ok && year != "" {
-			if series, ok := userState.Data["selected_series"].(string); ok && series != "" {
-				number, err := strconv.Atoi(callback.Data)
-				if err != nil {
-					log.Fatalf("Ошибка при конвертации: %s", err)
-				}
-				file := getPhoto(year, series, number)
-
-				if file != nil {
-					for key, value := range file.(map[string]string) {
-						if lastMessageID == 0 {
-							// Отправляем новое фото
-							media := tgbotapi.NewPhotoUpload(chatID, value)
-							media.Caption = key // Используем ключ как подпись
-
-							sentMsg, err := bot.Send(media)
-							if err != nil {
-								log.Printf("Ошибка при отправке фото %s: %s", value, err)
-							} else {
-								lastMessageID = sentMsg.MessageID // Сохраняем ID отправленного сообщения
-							}
-						} else {
-							// Удаляем предыдущее сообщение (опционально)
-							if _, err := bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
-								ChatID:    chatID,
-								MessageID: lastMessageID,
-							}); err != nil {
-								log.Printf("Ошибка при удалении сообщения: %s", err)
-							}
-
-							// Отправляем новое фото
-							media := tgbotapi.NewPhotoUpload(chatID, value)
-							media.Caption = key // Используем ключ как подпись
-
-							sentMsg, err := bot.Send(media)
-							if err != nil {
-								log.Printf("Ошибка при отправке фото %s: %s", value, err)
-							} else {
-								lastMessageID = sentMsg.MessageID // Сохраняем ID нового сообщения
-							}
-						}
-					}
-				}
-			}
-		}
-
 	case "all":
 		if year, ok := userState.Data["selected_year"].(string); ok && year != "" {
 			if series, ok := userState.Data["selected_series"].(string); ok && series != "" {
-				files := getPhoto(year, series, 0) // Получаем все файлы
+				messageIDs := sendAllPhotos(bot, chatID, year, series)
 
-				// Проверяем, что files не nil и это мапа
-				if files != nil {
-					for key, value := range files.(map[string]string) { // Приводим к нужному типу
-						err := SendPhoto(bot, chatID, value, key)
-						if err != nil {
-							log.Printf("Ошибка при отправке фото %s: %s", value, err)
-						}
-					}
-				}
+				// Сохраняем messageIDs в состояние пользователя, если нужно
+				userState.Data["sent_message_ids"] = messageIDs
 			}
 		}
 	default:
-		responseMsg = "Неизвестный выбор."
-		msg := tgbotapi.NewMessage(chatID, responseMsg)
-
-		bot.Send(msg)
+		if num, err := strconv.Atoi(callback.Data); err == nil {
+			sendSinglePhoto(bot, chatID, year, series, num)
+		} else {
+			bot.Send(tgbotapi.NewMessage(chatID, responseMsg))
+		}
 	}
+}
 
-	// Обновляем состояние пользователя
-	models.UpdateUserState(int64(callback.From.ID), "waiting_selection", userState.Data)
+func sendSinglePhoto(bot *tgbotapi.BotAPI, chatID int64, year, series string, number int) {
+	file := getPhoto(year, series, number)
 
-	// Подтверждение нажатия кнопки
-	bot.AnswerCallbackQuery(tgbotapi.NewCallback(callback.ID, "Вы выбрали: "+callback.Data))
+	if file != nil {
+		for key, value := range file.(map[string]string) {
+			media := tgbotapi.NewPhotoUpload(chatID, value)
+			media.Caption = key // Используем ключ как подпись
+
+			if lastMessageID != 0 {
+				if _, err := bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
+					ChatID:    chatID,
+					MessageID: lastMessageID,
+				}); err != nil {
+					log.Printf("Ошибка при удалении сообщения: %s", err)
+				}
+			}
+
+			sentMsg, err := bot.Send(media)
+			if err != nil {
+				log.Printf("Ошибка при отправке фото %s: %s", value, err)
+			} else {
+				lastMessageID = sentMsg.MessageID // Сохраняем ID нового сообщения
+			}
+		}
+	}
+}
+
+func sendAllPhotos(bot *tgbotapi.BotAPI, chatID int64, year, series string) []int {
+	files := getPhoto(year, series, 0) // Получаем все файлы
+	var messageIDs []int               // Слайс для хранения ID отправленных сообщений
+
+	if lastMessageID != 0 {
+		if _, err := bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
+			ChatID:    chatID,
+			MessageID: lastMessageID,
+		}); err != nil {
+			log.Printf("Ошибка при удалении сообщения: %s", err)
+		}
+	}
+	// if lastListID != 0 {
+	// 	if _, err := bot.DeleteMessage(tgbotapi.DeleteMessageConfig{
+	// 		ChatID:    chatID,
+	// 		MessageID: lastListID,
+	// 	}); err != nil {
+	// 		log.Printf("Ошибка при удалении сообщения: %s", err)
+	// 	}
+	// }
+	if files != nil {
+		for key, value := range files.(map[string]string) {
+			media := tgbotapi.NewPhotoUpload(chatID, value)
+			media.Caption = key // Используем ключ как подпись
+
+			sentMsg, err := bot.Send(media)
+			if err != nil {
+				log.Printf("Ошибка при отправке фото %s: %s", value, err)
+				continue // Пропускаем, если произошла ошибка
+			}
+			messageIDs = append(messageIDs, sentMsg.MessageID) // Сохраняем ID отправленного сообщения
+		}
+	}
+	return messageIDs // Возвращаем слайс с ID
 }
 
 func SendPhoto(bot *tgbotapi.BotAPI, chatID int64, photoPath string, caption string) error {
